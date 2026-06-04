@@ -44,7 +44,8 @@ export class GameScene extends Scene {
 
     this.highScore = Storage.get(STORAGE_HIGHSCORES, {});
 
-    ImageLoader.load("./assets/images/food.svg")
+    const foodSvgUrl = new URL('../../assets/images/food.svg', import.meta.url).href;
+    ImageLoader.load(foodSvgUrl)
       .then(img => {
         this.foodImage = img;
         if (this.food) this.food.sprite.image = img;
