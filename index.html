@@ -1,0 +1,30 @@
+<!doctype html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Snake</title>
+  <script>
+    (function () {
+      var NATIVE_W       = 596;
+      var NATIVE_TOTAL_H = 478;
+      var PAD            = 12;
+
+      var vw    = window.innerWidth;
+      var vh    = window.innerHeight;
+      var scale = Math.min(1, (vw - PAD * 2) / NATIVE_W, (vh - PAD * 2) / NATIVE_TOTAL_H);
+
+      var visualH = NATIVE_TOTAL_H * scale;
+      var marginV = ((NATIVE_TOTAL_H - visualH) / 2) * -1;
+
+      document.documentElement.style.setProperty('--scale',          scale);
+      document.documentElement.style.setProperty('--scale-margin-v', marginV + 'px');
+    })();
+  </script>
+  <link rel="stylesheet" href="./styles/style.css" />
+</head>
+<body>
+  <main id="app"></main>
+  <script type="module" src="./js/main.js"></script>
+</body>
+</html>
