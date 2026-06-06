@@ -29,10 +29,6 @@ export class GameScene extends Scene {
   }
 
   enter() {
-    if (window.innerHeight <= 500) {
-      const credit = document.querySelector(".credit");
-      if (credit) credit.style.display = "none";
-    }
     this.clock.reset();
     updateState({ status: GAME_STATUS.RUNNING, score: 0 });
 
@@ -114,10 +110,6 @@ export class GameScene extends Scene {
 
   exit() {
     super.exit();
-    if (window.innerHeight <= 500) {
-      const credit = document.querySelector(".credit");
-      if (credit) credit.style.display = "";
-    }
     const strip = document.getElementById("hud-strip");
     if (strip) strip.innerHTML = "";
   }
