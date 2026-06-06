@@ -8,7 +8,7 @@
     "preview": "vite preview"
   },
   "dependencies": {
-    "jygame": "file:../jygame"
+    "jygame": "file:./jygame"
   },
   "devDependencies": {
     "vite": "^6"
