@@ -101,12 +101,6 @@ body {
   z-index: 100;
 }
 
-@media (max-height: 500px) {
-  .credit {
-    display: none;
-  }
-}
-
 @keyframes appear {
   from { transform: scale(0); opacity: 0; }
   to   { transform: scale(1); opacity: 0.75; }
