@@ -1,4 +1,4 @@
-import { Scene, Input } from "jygame";
+import { Scene } from "jygame";
 import { DIFFICULTIES, COLOR_GREEN_BG } from "../constants.js";
 import { MenuScene } from "./MenuScene.js";
 import { GameScene } from "./GameScene.js";
@@ -9,20 +9,28 @@ export class DifficultyScene extends Scene {
     if (strip) strip.innerHTML = "";
 
     this.root.innerHTML = this._html();
+    this.root.querySelectorAll(".btn-level").forEach((btn) => {
+      btn.addEventListener("click", () => {
+        this.transitionTo(new GameScene({ mode: "classic", difficulty: btn.dataset.difficulty, backScene: DifficultyScene }));
+      });
+    });
+    this.root.querySelector(".btn-back").addEventListener("click", () => {
+      this.transitionTo(new MenuScene());
+    });
 
-    this.on(this.root, "click", (e) => {
-      const level = e.target.closest(".btn-level");
-      if (level) {
-        this.transitionTo(new GameScene({ mode: "classic", difficulty: level.dataset.difficulty, backScene: DifficultyScene }));
-      } else if (e.target.closest(".btn-back")) {
+    this._boundKeydown = (e) => {
+      if (e.key === "Escape") {
+        e.preventDefault();
         this.transitionTo(new MenuScene());
       }
-    });
+    };
+    document.addEventListener("keydown", this._boundKeydown);
   }
 
-  update() {
-    if (Input.justPressed("ESCAPE")) {
-      this.transitionTo(new MenuScene());
+  exit() {
+    if (this._boundKeydown) {
+      document.removeEventListener("keydown", this._boundKeydown);
+      this._boundKeydown = null;
     }
   }
 

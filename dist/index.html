@@ -4,8 +4,25 @@
   <meta charset="UTF-8" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>Snake</title>
-  <script type="module" crossorigin src="./assets/index-Cef0nML7.js"></script>
-  <link rel="stylesheet" crossorigin href="./assets/index-CWzR5IlN.css">
+  <script>
+    (function () {
+      var NATIVE_W       = 596;
+      var NATIVE_TOTAL_H = 478;
+      var PAD            = 12;
+
+      var vw    = window.innerWidth;
+      var vh    = window.innerHeight;
+      var scale = Math.min(1, (vw - PAD * 2) / NATIVE_W, (vh - PAD * 2) / NATIVE_TOTAL_H);
+
+      var visualH = NATIVE_TOTAL_H * scale;
+      var marginV = ((NATIVE_TOTAL_H - visualH) / 2) * -1;
+
+      document.documentElement.style.setProperty('--scale',          scale);
+      document.documentElement.style.setProperty('--scale-margin-v', marginV + 'px');
+    })();
+  </script>
+  <script type="module" crossorigin src="./assets/index-DU4rE_TI.js"></script>
+  <link rel="stylesheet" crossorigin href="./assets/index-B33ycL7P.css">
 </head>
 <body>
   <main id="app"></main>
