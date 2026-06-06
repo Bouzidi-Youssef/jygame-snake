@@ -38,6 +38,8 @@ export class GameScene extends Scene {
   }
 
   enter() {
+    const credit = document.querySelector(".credit");
+    if (credit) credit.style.display = "none";
     this.score = 0;
     this.status = GAME_STATUS.RUNNING;
     this.moveAccumulator = 0;
@@ -124,6 +126,8 @@ export class GameScene extends Scene {
   }
 
   exit() {
+    const credit = document.querySelector(".credit");
+    if (credit) credit.style.display = "";
     if (this._boundKeydown) {
       document.removeEventListener("keydown", this._boundKeydown);
       this._boundKeydown = null;
