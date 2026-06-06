@@ -3,7 +3,7 @@ import { MenuScene } from "./scenes/MenuScene.js";
 import { CELL, DEFAULTS } from "./constants.js";
 
 const NATIVE_W = 596;
-const NATIVE_TOTAL_H = 478;
+const NATIVE_TOTAL_H = 484;
 const VIEWPORT_PAD = 12;
 
 function applyScale() {

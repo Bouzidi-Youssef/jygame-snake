@@ -1,4 +1,4 @@
-import { Scene, Input, Group, Sprite, Storage, ImageLoader } from "jygame";
+import { Scene, Input, Group, Sprite, Storage, ImageLoader, Clock } from "jygame";
 import { Snake } from "../entities/Snake.js";
 import { Food } from "../entities/Food.js";
 import { parseWallMap, saveStageProgress } from "../stage-loader.js";
@@ -25,24 +25,20 @@ export class GameScene extends Scene {
     this.highScore = {};
     this.score = 0;
     this.status = GAME_STATUS.IDLE;
-    this.tickRate = DEFAULTS.TICK_RATE / 1000;
+    this.clock = null;
     this.wrapEdges = true;
     this.cols = DEFAULTS.COLS;
     this.rows = DEFAULTS.ROWS;
     this.foodTarget = null;
-    this.moveAccumulator = 0;
-    this._boundKeydown = null;
-    this._unsubSwipe = null;
-    this._unsubTap = null;
-    this._clickHandler = null;
   }
 
   enter() {
+    const strip = document.getElementById("hud-strip");
+    if (strip) strip.style.display = "";
     const credit = document.querySelector(".credit");
     if (credit) credit.style.display = "none";
     this.score = 0;
     this.status = GAME_STATUS.RUNNING;
-    this.moveAccumulator = 0;
 
     this.highScore = Storage.get(STORAGE_HIGHSCORES, {});
 
@@ -56,7 +52,7 @@ export class GameScene extends Scene {
 
     if (this.mode === MODES.CLASSIC) {
       const diff = DIFFICULTIES[this.difficulty];
-      this.tickRate = diff.TICK_RATE / 1000;
+      this.clock = new Clock(1000 / diff.TICK_RATE);
       this.wrapEdges = true;
       this.walls = [];
 
@@ -71,7 +67,7 @@ export class GameScene extends Scene {
       this.food.sprite.image = this.foodImage;
     } else {
       const cfg = this.stageConfig;
-      this.tickRate = cfg.tickRate / 1000;
+      this.clock = new Clock(1000 / cfg.tickRate);
       this.wrapEdges = cfg.wrapEdges;
       this.foodTarget = cfg.foodTarget;
       this.walls = parseWallMap(cfg.walls);
@@ -93,16 +89,19 @@ export class GameScene extends Scene {
       this.wallGroup.add(s);
     }
 
-    this._boundKeydown = (e) => this._handleKeydown(e);
-    document.addEventListener("keydown", this._boundKeydown);
+    this.on(document, "keydown", (e) => {
+      if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight", " ", "Spacebar", "Escape"].includes(e.key)) {
+        e.preventDefault();
+      }
+    });
 
-    this._unsubSwipe = Input.onSwipe((dir) => {
+    this.onSwipe((dir) => {
       if (this.status === GAME_STATUS.RUNNING) {
         this.snake.queueDirection(dir);
       }
     });
 
-    this._unsubTap = Input.onTap(() => {
+    this.onTap(() => {
       if (this.status === GAME_STATUS.RUNNING) {
         this.status = GAME_STATUS.PAUSED;
         this.game.refreshUI();
@@ -112,53 +111,62 @@ export class GameScene extends Scene {
       }
     });
 
-    this._clickHandler = (e) => {
+    this.on(this.root, "click", (e) => {
       const replay = e.target.closest(".btn-replay");
       if (replay) { this._retry(); return; }
       const menu = e.target.closest(".btn-menu");
       if (menu) { this.transitionTo(new MenuScene()); return; }
       const stageOverlay = e.target.closest(".stage-complete-overlay");
       if (stageOverlay) { this._advanceStage(); return; }
-    };
-    this.root.addEventListener("click", this._clickHandler);
+    });
 
     this._updateHUD();
   }
 
   exit() {
+    const strip = document.getElementById("hud-strip");
+    if (strip) strip.style.display = "none";
     const credit = document.querySelector(".credit");
     if (credit) credit.style.display = "";
-    if (this._boundKeydown) {
-      document.removeEventListener("keydown", this._boundKeydown);
-      this._boundKeydown = null;
-    }
-    if (this._unsubSwipe) {
-      this._unsubSwipe();
-      this._unsubSwipe = null;
-    }
-    if (this._unsubTap) {
-      this._unsubTap();
-      this._unsubTap = null;
-    }
-    if (this._clickHandler) {
-      this.root.removeEventListener("click", this._clickHandler);
-      this._clickHandler = null;
-    }
-    const strip = document.getElementById("hud-strip");
-    if (strip) strip.innerHTML = "";
   }
 
   update(dt) {
     if (this.status === GAME_STATUS.RUNNING) {
-      this.moveAccumulator += dt;
-      while (this.moveAccumulator >= this.tickRate) {
-        this.moveAccumulator -= this.tickRate;
+      const ticks = this.clock.tick(dt);
+      for (let i = 0; i < ticks; i++) {
         this._tick();
       }
     }
 
     if (this.food) {
       this.food.updateAnimations();
+    }
+
+    if (this.status === GAME_STATUS.RUNNING) {
+      const dirs = ["UP", "DOWN", "LEFT", "RIGHT"];
+      for (const dir of dirs) {
+        if (Input.justPressed(dir)) {
+          this.snake.queueDirection(dir);
+        }
+      }
+    }
+
+    if (Input.justPressed("SPACE")) {
+      if (this.status === GAME_STATUS.RUNNING) {
+        this.status = GAME_STATUS.PAUSED;
+        this.game.refreshUI();
+      } else if (this.status === GAME_STATUS.PAUSED) {
+        this.status = GAME_STATUS.RUNNING;
+        this.game.refreshUI();
+      } else if (this.status === GAME_STATUS.STAGE_COMPLETE) {
+        this._advanceStage();
+      } else if (this.status === GAME_STATUS.GAMEOVER) {
+        this._retry();
+      }
+    }
+
+    if (Input.justPressed("ESCAPE")) {
+      this.transitionTo(new this.backScene());
     }
 
     this._updateHUD();
@@ -189,7 +197,9 @@ export class GameScene extends Scene {
     if (!this.wrapEdges) {
       if (head.x < 0 || head.y < 0 || head.x >= this.cols || head.y >= this.rows) return true;
     }
-    if (this.walls.some(w => w.x === head.x && w.y === head.y)) return true;
+    const px = head.x * CELL + CELL / 2;
+    const py = head.y * CELL + CELL / 2;
+    if (this.wallGroup.collidePoint({ x: px, y: py }).length > 0) return true;
     return false;
   }
 
@@ -215,47 +225,6 @@ export class GameScene extends Scene {
     this.food = null;
     saveStageProgress(this.stageIndex + 1);
     this.game.refreshUI();
-  }
-
-  _handleKeydown(e) {
-    if (e.repeat) return;
-
-    if (e.key === " " || e.key === "Spacebar") {
-      e.preventDefault();
-      if (this.status === GAME_STATUS.RUNNING) {
-        this.status = GAME_STATUS.PAUSED;
-        this.game.refreshUI();
-      } else if (this.status === GAME_STATUS.PAUSED) {
-        this.status = GAME_STATUS.RUNNING;
-        this.game.refreshUI();
-      } else if (this.status === GAME_STATUS.STAGE_COMPLETE) {
-        this._advanceStage();
-      } else if (this.status === GAME_STATUS.GAMEOVER) {
-        this._retry();
-      }
-      return;
-    }
-
-    if (e.key === "Escape") {
-      e.preventDefault();
-      this.transitionTo(new this.backScene());
-      return;
-    }
-
-    if (["ArrowUp", "ArrowDown", "ArrowLeft", "ArrowRight"].includes(e.key)) {
-      e.preventDefault();
-    }
-
-    if (this.status !== GAME_STATUS.RUNNING) return;
-
-    const keyMap = {
-      ArrowUp: "UP", ArrowDown: "DOWN", ArrowLeft: "LEFT", ArrowRight: "RIGHT",
-      w: "UP", W: "UP", s: "DOWN", S: "DOWN",
-      a: "LEFT", A: "LEFT", d: "RIGHT", D: "RIGHT",
-    };
-
-    const dir = keyMap[e.key];
-    if (dir) this.snake.queueDirection(dir);
   }
 
   _retry() {
@@ -286,19 +255,18 @@ export class GameScene extends Scene {
   }
 
   _updateHUD() {
-    const strip = document.getElementById("hud-strip");
-    if (!strip) return;
+    const scoreEl = document.getElementById("hud-score");
+    const rightEl = document.getElementById("hud-right");
+    if (!scoreEl || !rightEl) return;
+
+    scoreEl.textContent = this.score;
 
     if (this.mode === MODES.STAGE) {
-      strip.innerHTML = `
-        <span class="hud-score">${this.score}</span>
-        <span>Stage ${this.stageIndex + 1}/${stages.length}</span>`;
+      rightEl.textContent = `Stage ${this.stageIndex + 1}/${stages.length}`;
     } else {
       const label = DIFFICULTIES[this.difficulty]?.LABEL || "---";
       const high = this.highScore[this.difficulty] || 0;
-      strip.innerHTML = `
-        <span class="hud-score">${this.score}</span>
-        <span>${label.toUpperCase()}<span class="hud-highscore">${high}</span></span>`;
+      rightEl.textContent = `${label.toUpperCase()} ${high}`;
     }
   }
 

@@ -6,32 +6,31 @@ import { GameScene } from "./GameScene.js";
 export class DifficultyScene extends Scene {
   enter() {
     const strip = document.getElementById("hud-strip");
-    if (strip) strip.innerHTML = "";
+    if (strip) strip.style.display = "none";
+
+    const scoreEl = document.getElementById("hud-score");
+    const rightEl = document.getElementById("hud-right");
+    if (scoreEl) scoreEl.textContent = "0";
+    if (rightEl) rightEl.textContent = "";
 
     this.root.innerHTML = this._html();
+
     this.root.querySelectorAll(".btn-level").forEach((btn) => {
-      btn.addEventListener("click", () => {
+      this.on(btn, "click", () => {
         this.transitionTo(new GameScene({ mode: "classic", difficulty: btn.dataset.difficulty, backScene: DifficultyScene }));
       });
     });
-    this.root.querySelector(".btn-back").addEventListener("click", () => {
+
+    this.on(this.root.querySelector(".btn-back"), "click", () => {
       this.transitionTo(new MenuScene());
     });
 
-    this._boundKeydown = (e) => {
+    this.on(document, "keydown", (e) => {
       if (e.key === "Escape") {
         e.preventDefault();
         this.transitionTo(new MenuScene());
       }
-    };
-    document.addEventListener("keydown", this._boundKeydown);
-  }
-
-  exit() {
-    if (this._boundKeydown) {
-      document.removeEventListener("keydown", this._boundKeydown);
-      this._boundKeydown = null;
-    }
+    });
   }
 
   render(ctx) {
